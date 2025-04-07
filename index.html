@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IOG Model Context Protocol (MCP) Learning App</title>
+    <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Understanding Model Context Protocol (MCP)</h1>
+            <button id="settings-btn" class="settings-button">⚙️ Settings</button>
+        </div>
+    </header>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="settings-form">
+                <label for="deepseek-key">DeepSeek API Key:</label>
+                <input type="password" id="deepseek-key" placeholder="Enter your DeepSeek API key">
+                <div class="button-group">
+                    <button id="save-settings">Save</button>
+                    <button id="close-modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <main>
+        <section id="introduction">
+            <h2>What is Model Context Protocol?</h2>
+            <p>Model Context Protocol (MCP) is a standardized way for Large Language Models (LLMs) to interact with external tools and data sources.</p>
+            <p>It provides a structured format for:
+                <ul>
+                    <li>Sending context to models</li>
+                    <li>Allowing models to call external tools</li>
+                    <li>Handling responses and tool outputs</li>
+                </ul>
+            </p>
+        </section>
+
+        <section id="key-concepts">
+            <h2>Key MCP Concepts</h2>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header" id="context-windows-header">
+                        <h3>Context Windows</h3>
+                        <span class="accordion-icon">+</span>
+                    </div>
+                    <div class="accordion-content" id="context-windows-content">
+                        <p>Context windows define how much information a language model can process at once. They act as the model's working memory, determining:</p>
+                        <ul>
+                            <li>The maximum length of text the model can consider</li>
+                            <li>How much history from a conversation is retained</li>
+                            <li>The amount of external data that can be included</li>
+                        </ul>
+                        <p>In MCP, context windows are carefully managed to include the most relevant information for the task.</p>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <div class="accordion-header" id="tools-header">
+                        <h3>Tools</h3>
+                        <span class="accordion-icon">+</span>
+                    </div>
+                    <div class="accordion-content" id="tools-content">
+                        <p>Tools are external functions that language models can call to perform actions they cannot do directly, such as:</p>
+                        <ul>
+                            <li>Retrieving real-time information (weather, news, data)</li>
+                            <li>Performing calculations or data processing</li>
+                            <li>Interacting with external systems and APIs</li>
+                            <li>Executing code or database queries</li>
+                        </ul>
+                        <p>MCP provides a standardized way for models to discover, call, and process results from these tools.</p>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <div class="accordion-header" id="protocols-header">
+                        <h3>Protocols</h3>
+                        <span class="accordion-icon">+</span>
+                    </div>
+                    <div class="accordion-content" id="protocols-content">
+                        <p>Protocols define the standardized formats and conventions for communication between models and tools:</p>
+                        <ul>
+                            <li>How tools are described to models</li>
+                            <li>The format of tool calls and parameters</li>
+                            <li>How results are returned to the model</li>
+                            <li>Error handling and fallback mechanisms</li>
+                        </ul>
+                        <p>These protocols ensure consistent behavior across different models and tool implementations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="interactive-demo">
+            <h2>Interactive Demo of an IOG Model Context Protocol (MCP)</h2>
+            <div id="demo-container">
+                <div id="model-side">
+                    <h3>DeepSeek Model</h3>
+                    <div id="model-prompt">
+                        <textarea placeholder="Enter a prompt that might require external tools..."></textarea>
+                        <div class="button-group">
+                            <button id="send-prompt">Send</button>
+                            <button id="refresh-prompt" title="Start a new query">↻ New Query</button>
+                        </div>
+                    </div>
+                    <div id="model-thinking"></div>
+                </div>
+                <div id="mcp-side">
+                    <div id="tool-side">
+                        <h3>Tools</h3>
+                        <div id="tools-list">
+                            <div class="tool" data-tool="calculator">
+                                <h4>Calculator</h4>
+                                <p>Performs complex calculations</p>
+                            </div>
+                            <div class="tool" data-tool="search">
+                                <h4>Search</h4>
+                                <p>Searches for information</p>
+                            </div>
+                            <div class="tool" data-tool="crypto-price">
+                                <h4>Crypto Pricing</h4>
+                                <p>Get cryptocurrency prices and calculate staking returns</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="data-side">
+                        <h3>Data Sources</h3>
+                        <div id="data-sources-list">
+                            <div class="data-source" data-source="iog-personas">
+                                <h4>Personas</h4>
+                                <p>IOG user persona profiles</p>
+                            </div>
+                            <div class="data-source" data-source="iog-products">
+                                <h4>Products</h4>
+                                <p>IOG product portfolio</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="tool-output"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="concept-details" class="hidden">
+            <button id="back-button">← Back to Concepts</button>
+            <div id="concept-content"></div>
+        </section>
+    </main>
+    <footer>
+        <p>MCP Learning App - Created for educational purposes</p>
+    </footer>
+    <script src="src/crypto-helpers.js"></script>
+    <script src="src/app.js"></script>
+</body>
+</html>
