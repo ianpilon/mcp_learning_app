@@ -4,7 +4,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const settingsModal = document.getElementById('settings-modal');
     const closeModalBtn = document.getElementById('close-modal');
     const saveSettingsBtn = document.getElementById('save-settings');
-    const apiKeyInput = document.getElementById('deepseek-key');
+    const deepseekKeyInput = document.getElementById('deepseek-key');
+    const openaiKeyInput = document.getElementById('openai-key');
+    const deepseekOption = document.getElementById('deepseek-option');
+    const openaiOption = document.getElementById('openai-option');
+    const deepseekSettings = document.getElementById('deepseek-settings');
+    const openaiSettings = document.getElementById('openai-settings');
 
     // Interactive demo elements
     const sendPromptButton = document.getElementById('send-prompt');
@@ -23,6 +28,21 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Settings button clicked');
         settingsModal.style.display = 'block';
     });
+    
+    // Provider selection handler
+    deepseekOption.addEventListener('change', function() {
+        if (this.checked) {
+            deepseekSettings.style.display = 'block';
+            openaiSettings.style.display = 'none';
+        }
+    });
+    
+    openaiOption.addEventListener('change', function() {
+        if (this.checked) {
+            deepseekSettings.style.display = 'none';
+            openaiSettings.style.display = 'block';
+        }
+    });
 
     // Close button handler
     closeModalBtn.addEventListener('click', function() {
@@ -38,11 +58,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Save settings handler
     saveSettingsBtn.addEventListener('click', async function() {
-        const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
+        // Get the selected provider
+        const provider = deepseekOption.checked ? 'deepseek' : 'openai';
+        
+        // Validate based on selected provider
+        if (provider === 'deepseek' && !deepseekKeyInput.value.trim()) {
             alert('Please enter your DeepSeek API key');
             return;
+        } else if (provider === 'openai' && !openaiKeyInput.value.trim()) {
+            alert('Please enter your OpenAI API key');
+            return;
         }
+        
+        // Prepare the settings payload
+        const settings = {
+            provider: provider,
+            deepseekKey: deepseekKeyInput.value.trim(),
+            openaiKey: openaiKeyInput.value.trim()
+        };
 
         try {
             const response = await fetch('http://localhost:3000/api/settings', {
@@ -50,19 +83,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ apiKey }),
+                body: JSON.stringify(settings),
             });
 
             if (response.ok) {
                 settingsModal.style.display = 'none';
-                alert('API key saved successfully!');
+                alert('Settings saved successfully!');
             } else {
                 const data = await response.json();
-                alert(`Error: ${data.error || 'Failed to save API key'}`);
+                alert(`Error: ${data.error || 'Failed to save settings'}`);
             }
         } catch (error) {
-            console.error('Error saving API key:', error);
-            alert('Failed to save API key. Please try again.');
+            console.error('Error saving settings:', error);
+            alert('Failed to save settings. Please try again.');
         }
     });
 
@@ -70,12 +103,32 @@ document.addEventListener('DOMContentLoaded', function() {
     async function checkApiKeyStatus() {
         try {
             const response = await fetch('http://localhost:3000/api/settings/status');
-            const { hasApiKey } = await response.json();
-            if (!hasApiKey) {
+            const { provider, hasDeepseekKey, hasOpenaiKey } = await response.json();
+            
+            // Set the correct radio button based on saved provider
+            if (provider === 'openai') {
+                openaiOption.checked = true;
+                deepseekSettings.style.display = 'none';
+                openaiSettings.style.display = 'block';
+                // Update model-side heading
+                document.querySelector('#model-side h3').textContent = 'OpenAI Model';
+            } else {
+                deepseekOption.checked = true;
+                deepseekSettings.style.display = 'block';
+                openaiSettings.style.display = 'none';
+                // Update model-side heading
+                document.querySelector('#model-side h3').textContent = 'DeepSeek Model';
+            }
+            
+            // Show settings modal if the selected provider's API key is not set
+            if ((provider === 'deepseek' && !hasDeepseekKey) || 
+                (provider === 'openai' && !hasOpenaiKey)) {
                 settingsModal.style.display = 'block';
             }
         } catch (error) {
             console.error('Error checking API key status:', error);
+            // Show settings modal on error to ensure API keys are set
+            settingsModal.style.display = 'block';
         }
     }
     checkApiKeyStatus();

@@ -459,6 +459,20 @@ footer {
     gap: 15px;
 }
 
+.model-selection {
+    margin-bottom: 10px;
+}
+
+.radio-group {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.radio-group input[type="radio"] {
+    margin-right: 5px;
+}
+
 .settings-form label {
     font-weight: 600;
     color: #333;

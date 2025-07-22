@@ -12,22 +12,48 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
-// In-memory store for the API key (in production, use a proper secure storage)
+// In-memory store for API keys (in production, use a proper secure storage)
 let deepseekApiKey = '';
+let openaiApiKey = '';
+let activeProvider = 'deepseek'; // Default provider
 
-// Endpoint to save the API key
+// Endpoint to save the API key and provider settings
 app.post('/api/settings', (req, res) => {
-    const { apiKey } = req.body;
-    if (!apiKey) {
-        return res.status(400).json({ error: 'API key is required' });
+    const { provider, deepseekKey, openaiKey } = req.body;
+    
+    if (provider !== 'deepseek' && provider !== 'openai') {
+        return res.status(400).json({ error: 'Invalid provider' });
     }
-    deepseekApiKey = apiKey;
-    res.json({ message: 'API key saved successfully' });
+    
+    if (provider === 'deepseek' && !deepseekKey) {
+        return res.status(400).json({ error: 'DeepSeek API key is required' });
+    }
+    
+    if (provider === 'openai' && !openaiKey) {
+        return res.status(400).json({ error: 'OpenAI API key is required' });
+    }
+    
+    // Update the stored values
+    activeProvider = provider;
+    
+    if (deepseekKey) {
+        deepseekApiKey = deepseekKey;
+    }
+    
+    if (openaiKey) {
+        openaiApiKey = openaiKey;
+    }
+    
+    res.json({ message: 'Settings saved successfully' });
 });
 
-// Endpoint to check if API key is set
+// Endpoint to check settings status
 app.get('/api/settings/status', (req, res) => {
-    res.json({ hasApiKey: Boolean(deepseekApiKey) });
+    res.json({ 
+        provider: activeProvider,
+        hasDeepseekKey: Boolean(deepseekApiKey),
+        hasOpenaiKey: Boolean(openaiApiKey)
+    });
 });
 
 // Endpoint to handle chat completions
@@ -36,11 +62,15 @@ app.post('/api/chat', async (req, res) => {
         const { prompt, tools } = req.body;
         console.log('Received chat request:', { prompt, tools });
         
-        if (!deepseekApiKey) {
-            return res.status(400).json({ error: 'API key not set. Please configure your settings.' });
+        // Check if the appropriate API key is set
+        if (activeProvider === 'deepseek' && !deepseekApiKey) {
+            return res.status(400).json({ error: 'DeepSeek API key not set. Please configure your settings.' });
+        } else if (activeProvider === 'openai' && !openaiApiKey) {
+            return res.status(400).json({ error: 'OpenAI API key not set. Please configure your settings.' });
         }
         
-        // For demo purposes, we'll simulate the DeepSeek API response with multiple tool calls
+        // For demo purposes, we'll simulate the API response with multiple tool calls
+        // In a real implementation, we would make actual API calls to DeepSeek or OpenAI
         // This allows us to demonstrate how MCP works with multiple tools in sequence
         
         // Analyze the prompt to determine which tools to use

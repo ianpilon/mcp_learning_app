@@ -19,8 +19,23 @@
         <div class="modal-content">
             <h2>Settings</h2>
             <div class="settings-form">
-                <label for="deepseek-key">DeepSeek API Key:</label>
-                <input type="password" id="deepseek-key" placeholder="Enter your DeepSeek API key">
+                <div class="model-selection">
+                    <label>Choose LLM Provider:</label>
+                    <div class="radio-group">
+                        <input type="radio" id="deepseek-option" name="llm-provider" value="deepseek" checked>
+                        <label for="deepseek-option">DeepSeek</label>
+                        <input type="radio" id="openai-option" name="llm-provider" value="openai">
+                        <label for="openai-option">OpenAI</label>
+                    </div>
+                </div>
+                <div id="deepseek-settings">
+                    <label for="deepseek-key">DeepSeek API Key:</label>
+                    <input type="password" id="deepseek-key" placeholder="Enter your DeepSeek API key">
+                </div>
+                <div id="openai-settings" style="display: none;">
+                    <label for="openai-key">OpenAI API Key:</label>
+                    <input type="password" id="openai-key" placeholder="Enter your OpenAI API key">
+                </div>
                 <div class="button-group">
                     <button id="save-settings">Save</button>
                     <button id="close-modal">Cancel</button>
