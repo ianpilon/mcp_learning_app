@@ -1,0 +1,62 @@
+{
+    "charles_hoskinson": {
+        "id": "charles_hoskinson",
+        "name": "Charles Hoskinson",
+        "position": "Chief Executive Officer & Founder",
+        "bio": "Charles Hoskinson is the CEO and founder of Input Output Global (IOG), the company behind Cardano blockchain."
+    },
+    "jeremy_wood": {
+        "id": "jeremy_wood",
+        "name": "Jeremy Wood",
+        "position": "Founder",
+        "bio": "Jeremy Wood is a co-founder of IOG and has extensive experience in the cryptocurrency industry."
+    },
+    "tamara_haasen": {
+        "id": "tamara_haasen",
+        "name": "Tamara Haasen",
+        "position": "President",
+        "bio": "Tamara Haasen serves as the President of IOG."
+    },
+    "romain_pellerin": {
+        "id": "romain_pellerin",
+        "name": "Romain Pellerin",
+        "position": "Chief Technology Officer",
+        "bio": "Romain Pellerin is the Chief Technology Officer at IOG, leading the engineering division."
+    },
+    "aggelos_kiayias": {
+        "id": "aggelos_kiayias",
+        "name": "Aggelos Kiayias",
+        "position": "Chief Scientist",
+        "bio": "Aggelos Kiayias is the Chief Scientist at IOG, overseeing academic research initiatives."
+    },
+    "joel_telpner": {
+        "id": "joel_telpner",
+        "name": "Joel Stephan Telpner",
+        "position": "Chief Legal Officer",
+        "bio": "Joel Stephan Telpner serves as the Chief Legal Officer at IOG, handling legal matters for the organization."
+    },
+    "gerard_moroney": {
+        "id": "gerard_moroney",
+        "name": "Gerard Moroney",
+        "position": "Chief Operating Officer",
+        "bio": "Gerard Moroney is the Chief Operating Officer at IOG, overseeing operations."
+    },
+    "glenda_shore": {
+        "id": "glenda_shore",
+        "name": "Glenda Shore",
+        "position": "VP of People Operations",
+        "bio": "Glenda Shore is the VP of People Operations at IOG, leading the Human Resources department."
+    },
+    "tim_harrison": {
+        "id": "tim_harrison",
+        "name": "Tim Harrison",
+        "position": "VP of Community & Ecosystem",
+        "bio": "Tim Harrison is the VP of Community & Ecosystem at IOG, handling communications."
+    },
+    "mike_ward": {
+        "id": "mike_ward",
+        "name": "Mike Ward",
+        "position": "Chief Product Officer",
+        "bio": "Mike Ward serves as the Chief Product Officer at IOG, leading product development efforts."
+    }
+}

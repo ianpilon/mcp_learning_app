@@ -1,4 +1,29 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Global memory state
+    let useGlobalMemory = true;
+    
+    // Initialize memory toggle
+    const memoryToggle = document.getElementById('memory-toggle');
+    if (memoryToggle) {
+        memoryToggle.checked = useGlobalMemory;
+        
+        // Set initial state of memory items
+        const memoryItems = document.querySelectorAll('.memory-item');
+        memoryItems.forEach(item => {
+            item.setAttribute('data-memory', useGlobalMemory ? 'active' : 'inactive');
+        });
+        
+        // Add event listener for toggle changes
+        memoryToggle.addEventListener('change', function() {
+            useGlobalMemory = this.checked;
+            console.log('Global memory toggled:', useGlobalMemory ? 'ON' : 'OFF');
+            
+            // Update visual state of memory items
+            memoryItems.forEach(item => {
+                item.setAttribute('data-memory', useGlobalMemory ? 'active' : 'inactive');
+            });
+        });
+    }
     // Settings modal elements
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
@@ -19,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const toolOutput = document.getElementById('tool-output');
     const tools = document.querySelectorAll('.tool');
     const dataSources = document.querySelectorAll('.data-source');
+    const modelTitle = document.getElementById('model-title');
+    const demoSectionTitle = document.getElementById('demo-section-title');
     
     // Accordion elements
     const accordionHeaders = document.querySelectorAll('.accordion-header');
@@ -34,6 +61,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.checked) {
             deepseekSettings.style.display = 'block';
             openaiSettings.style.display = 'none';
+            modelTitle.textContent = 'DeepSeek Model';
+            demoSectionTitle.textContent = 'Interactive Demo of an IOG Model Context Protocol (MCP)';
         }
     });
     
@@ -41,6 +70,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.checked) {
             deepseekSettings.style.display = 'none';
             openaiSettings.style.display = 'block';
+            modelTitle.textContent = 'OpenAI Model';
+            demoSectionTitle.textContent = 'Interactive Demo of an OpenAI Model Context Protocol (MCP)';
         }
     });
 
@@ -89,6 +120,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 settingsModal.style.display = 'none';
                 alert('Settings saved successfully!');
+                // Update the model title based on the selected provider
+                modelTitle.textContent = provider === 'deepseek' ? 'DeepSeek Model' : 'OpenAI Model';
+                // Update the demo section title based on the selected provider
+                demoSectionTitle.textContent = provider === 'deepseek' 
+                    ? 'Interactive Demo of an IOG Model Context Protocol (MCP)' 
+                    : 'Interactive Demo of an OpenAI Model Context Protocol (MCP)';
             } else {
                 const data = await response.json();
                 alert(`Error: ${data.error || 'Failed to save settings'}`);
@@ -233,7 +270,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     prompt,
-                    tools: allTools
+                    tools: allTools,
+                    useGlobalMemory: useGlobalMemory
                 })
             });
 
@@ -364,6 +402,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // Final conclusion after all tools have been used
         modelThinking.innerHTML += `<p class="success">All tools executed successfully!</p>`;
         
+        // Generate a final answer based on collected tool results
+        const finalAnswer = await generateFinalAnswer(promptTextarea.value.trim(), allResults);
+        
+        // Update the Analysis component with the final answer
+        modelThinking.innerHTML += `
+            <div class="final-answer-analysis">
+                <h4>Final Answer:</h4>
+                <div class="answer-content">${finalAnswer}</div>
+            </div>
+        `;
+        
+        // Also create a final answer element for the tool results container
+        const finalAnswerElement = document.createElement('div');
+        finalAnswerElement.className = 'final-answer';
+        finalAnswerElement.innerHTML = `
+            <h4>Final Answer</h4>
+            <div class="answer-content">${finalAnswer}</div>
+        `;
+        resultsContainer.appendChild(finalAnswerElement);
+        
         // Add a final summary if multiple tools were used
         if (toolCalls.length > 1) {
             const summaryElement = document.createElement('div');
@@ -379,6 +437,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Generate a final answer based on all tool results
+    async function generateFinalAnswer(originalQuery, toolResults) {
+        try {
+            // Send the original query and all tool results to the server for synthesis
+            const response = await fetch('http://localhost:3000/api/synthesize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: originalQuery,
+                    toolResults: toolResults
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to generate final answer');
+            }
+            
+            const data = await response.json();
+            return data.answer || 'No clear answer could be synthesized from the tool results.';
+        } catch (error) {
+            console.error('Error generating final answer:', error);
+            return `<p class="error">Error generating final answer: ${error.message}</p>`;
+        }
+    }
+    
     // Process a single tool call
     async function processToolCall(toolName, query, previousResults) {
         let result = '';
@@ -713,6 +799,109 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     break;
                     
+                case 'iog-executives':
+                    console.log('Fetching IOG executives for query:', query);
+                    try {
+                        const response = await fetch('http://localhost:3000/api/executives');
+                        if (!response.ok) throw new Error('Failed to fetch executives');
+                        
+                        const executives = await response.json();
+                        console.log('Received executives data:', executives);
+                        
+                        const lowerQuery = query ? query.toLowerCase() : '';
+                        
+                        // Check if looking for a specific executive
+                        let specificExecutive = null;
+                        for (const executiveId in executives) {
+                            const executive = executives[executiveId];
+                            if (lowerQuery.includes(executive.name.toLowerCase()) || 
+                                lowerQuery.includes(executiveId.replace('_', ' ')) ||
+                                lowerQuery.includes(executive.position.toLowerCase())) {
+                                specificExecutive = executiveId;
+                                break;
+                            }
+                        }
+                        
+                        if (specificExecutive) {
+                            // Get the specific executive details
+                            const executive = executives[specificExecutive];
+                            result = `<h3>${executive.name} - ${executive.position}</h3>
+                                <div class="executive-bio">${executive.bio}</div>`;
+                        } 
+                        // Check if query is asking for a count of executives
+                        else if (lowerQuery.includes('how many') || lowerQuery.includes('count') || lowerQuery.includes('number of')) {
+                            const executiveCount = Object.keys(executives).length;
+                            result = `<h3>IOG Executives Count</h3>
+                                <p>IOG has <strong>${executiveCount}</strong> key executives in its leadership team:</p>
+                                <ul>
+                                    ${Object.values(executives).map(exec => `<li><strong>${exec.name}</strong> - ${exec.position}</li>`).join('')}
+                                </ul>`;
+                        }
+                        // If no specific executive or count query, show all executives
+                        else {
+                            result = '<h3>IOG Leadership Team:</h3>' +
+                                `<div class="executives-list">
+                                    ${Object.values(executives).map(exec => 
+                                    `<div class="executive-item">
+                                        <h4>${exec.name}</h4>
+                                        <p><strong>${exec.position}</strong></p>
+                                        <p>${exec.bio}</p>
+                                    </div>`).join('')}
+                                </div>`;
+                        }
+                        
+                        // Highlight the Executives data source
+                        const executivesDataSource = document.querySelector('[data-source="iog-executives"]');
+                        if (executivesDataSource) {
+                            executivesDataSource.classList.add('active');
+                            executivesDataSource.style.borderColor = '#9c6ade';
+                        }
+                    } catch (error) {
+                        console.error('Error fetching executives:', error);
+                        result = 'Error: Unable to fetch executive information. Please ensure the server is running.';
+                    }
+                    break;
+                    
+                case 'global-memory-access':
+                    console.log('Processing global memory access:', query);
+                    try {
+                        // Parse arguments if they are provided as a JSON string
+                        const args = typeof query === 'string' ? JSON.parse(query) : {};
+                        
+                        if (args.action === 'highlight') {
+                            // Visual indication that memory is being accessed
+                            const memoryItem = document.querySelector('.memory-item[data-memory="active"]');
+                            if (memoryItem) {
+                                memoryItem.style.boxShadow = '0 0 8px 2px rgba(74, 105, 189, 0.6)';
+                                setTimeout(() => {
+                                    memoryItem.style.boxShadow = '';
+                                }, 3000); // Reset after 3 seconds
+                            }
+                            
+                            result = '<p class="subtle-note">Global memory context included in query processing.</p>';
+                        } else {
+                            // Fetch global memory data
+                            const response = await fetch('http://localhost:3000/api/global-memory');
+                            if (!response.ok) throw new Error('Failed to fetch global memory');
+                            
+                            const memoryData = await response.json();
+                            
+                            result = '<h3>Global Memory Content:</h3>' +
+                                `<div class="memory-list">
+                                    ${Object.values(memoryData).map(item => 
+                                    `<div class="memory-data-item">
+                                        <h4>${item.name}</h4>
+                                        <p><strong>${item.position}</strong></p>
+                                        <p>${item.bio}</p>
+                                    </div>`).join('')}
+                                </div>`;
+                        }
+                    } catch (error) {
+                        console.error('Error processing global memory access:', error);
+                        result = 'Error: Unable to access global memory.';
+                    }
+                    break;
+                    
                 default:
                     result = `Unknown tool: ${toolName}`;
             }
@@ -757,6 +946,9 @@ document.addEventListener('DOMContentLoaded', function() {
         "What products does IOG offer?",
         "Tell me about RealFi",
         "What is Midnight?",
+        "Who are the executives at IOG?",
+        "Tell me about Charles Hoskinson",
+        "How many executives are in IOG's leadership team?",
         "What is the current price of ADA?",
         "If I stake 1000 ADA for 5 years at 5% APY, how much will I have?"
     ];

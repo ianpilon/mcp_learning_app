@@ -112,10 +112,10 @@
         </section>
 
         <section id="interactive-demo">
-            <h2>Interactive Demo of an IOG Model Context Protocol (MCP)</h2>
+            <h2 id="demo-section-title">Interactive Demo of an IOG Model Context Protocol (MCP)</h2>
             <div id="demo-container">
                 <div id="model-side">
-                    <h3>DeepSeek Model</h3>
+                    <h3 id="model-title">DeepSeek Model</h3>
                     <div id="model-prompt">
                         <textarea placeholder="Enter a prompt that might require external tools..."></textarea>
                         <div class="button-group">
@@ -154,6 +154,34 @@
                             <div class="data-source" data-source="iog-products">
                                 <h4>Products</h4>
                                 <p>IOG product portfolio</p>
+                            </div>
+                            <div class="data-source" data-source="iog-executives">
+                                <h4>Executives</h4>
+                                <p>IOG executive leadership team</p>
+                            </div>
+                        </div>
+                        
+                        <h3>Global Memory</h3>
+                        <div id="global-memory-container">
+                            <div class="memory-item" data-memory="active">
+                                <div class="memory-header">
+                                    <h4>Active Memory</h4>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="memory-toggle" checked>
+                                        <label for="memory-toggle"></label>
+                                    </div>
+                                </div>
+                                <p>Always inject key executive info into context window</p>
+                                <div id="memory-contents">
+                                    <div class="memory-entry">
+                                        <span class="memory-name">Charles Hoskinson</span>
+                                        <span class="memory-position">CEO & Founder</span>
+                                    </div>
+                                    <div class="memory-entry">
+                                        <span class="memory-name">Tamara Haasen</span>
+                                        <span class="memory-position">President</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

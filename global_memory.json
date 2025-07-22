@@ -1,0 +1,14 @@
+{
+    "charles_hoskinson": {
+        "id": "charles_hoskinson",
+        "name": "Charles Hoskinson",
+        "position": "Chief Executive Officer & Founder",
+        "bio": "Charles Hoskinson is the CEO and founder of Input Output Global (IOG), the company behind Cardano blockchain. Also known as C.H, the big dog, king of the rats."
+    },
+    "tamara_haasen": {
+        "id": "tamara_haasen",
+        "name": "Tamara Haasen",
+        "position": "President",
+        "bio": "Tamara Haasen serves as the President of IOG. Also known as Tam, the glue that holds it all together."
+    }
+}
