@@ -1,17 +1,73 @@
+// Global state variables for tool and data source toggles
+let useGlobalMemory = false; // Default to OFF
+const toolStates = {
+    'calculator': true,
+    'search': true,
+    'crypto-price': true
+};
+const dataSourceStates = {
+    'iog-personas': true,
+    'iog-products': true,
+    'iog-executives': true
+};
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Global memory state
-    let useGlobalMemory = true;
+    
+    // Initialize all tool toggles
+    const toolToggles = document.querySelectorAll('.tool-toggle');
+    toolToggles.forEach(toggle => {
+        const toolId = toggle.id.replace('-toggle', '');
+        const toolElement = toggle.closest('.tool');
+        const statusElement = toolElement.querySelector('.tool-status');
+        
+        // Set initial state (checked)
+        toggle.checked = toolStates[toolId] || false;
+        updateToolStatus(toggle.checked, statusElement);
+        
+        // Add event listener for toggle changes
+        toggle.addEventListener('change', function() {
+            toolStates[toolId] = this.checked;
+            console.log(`Tool ${toolId} toggled: ${this.checked ? 'ON' : 'OFF'}`);
+            updateToolStatus(this.checked, statusElement);
+        });
+    });
+    
+    // Initialize all data source toggles
+    const sourceToggles = document.querySelectorAll('.source-toggle');
+    sourceToggles.forEach(toggle => {
+        const sourceId = toggle.id.replace('-toggle', '');
+        const sourceElement = toggle.closest('.data-source');
+        const statusElement = sourceElement.querySelector('.source-status');
+        
+        // Set initial state (checked)
+        toggle.checked = dataSourceStates[sourceId] || false;
+        updateToolStatus(toggle.checked, statusElement);
+        
+        // Add event listener for toggle changes
+        toggle.addEventListener('change', function() {
+            dataSourceStates[sourceId] = this.checked;
+            console.log(`Data source ${sourceId} toggled: ${this.checked ? 'ON' : 'OFF'}`);
+            updateToolStatus(this.checked, statusElement);
+        });
+    });
     
     // Initialize memory toggle
     const memoryToggle = document.getElementById('memory-toggle');
     if (memoryToggle) {
-        memoryToggle.checked = useGlobalMemory;
+        // Get initial state from the UI element
+        useGlobalMemory = memoryToggle.checked;
         
         // Set initial state of memory items
         const memoryItems = document.querySelectorAll('.memory-item');
         memoryItems.forEach(item => {
             item.setAttribute('data-memory', useGlobalMemory ? 'active' : 'inactive');
         });
+        
+        // Update the memory status display
+        const memoryContainer = document.getElementById('global-memory-container');
+        const memoryStatus = memoryContainer.querySelector('.memory-status') || 
+            createStatusElement(memoryContainer);
+        updateToolStatus(useGlobalMemory, memoryStatus);
         
         // Add event listener for toggle changes
         memoryToggle.addEventListener('change', function() {
@@ -22,19 +78,31 @@ document.addEventListener('DOMContentLoaded', function() {
             memoryItems.forEach(item => {
                 item.setAttribute('data-memory', useGlobalMemory ? 'active' : 'inactive');
             });
+            
+            // Update status message
+            updateToolStatus(useGlobalMemory, memoryStatus);
         });
     }
-    // Settings modal elements
-    const settingsBtn = document.getElementById('settings-btn');
-    const settingsModal = document.getElementById('settings-modal');
-    const closeModalBtn = document.getElementById('close-modal');
-    const saveSettingsBtn = document.getElementById('save-settings');
-    const deepseekKeyInput = document.getElementById('deepseek-key');
+    
+    // Function to update the status display of a toggle
+    function updateToolStatus(isEnabled, statusElement) {
+        if (!statusElement) return;
+        
+        // Hide the status element text - we'll use colored toggle switches instead
+        statusElement.textContent = '';
+        statusElement.style.display = 'none';
+    }
+    
+    // Function to create a status element if it doesn't exist
+    function createStatusElement(container) {
+        const statusElement = document.createElement('div');
+        statusElement.className = 'memory-status';
+        container.appendChild(statusElement);
+        return statusElement;
+    }
+    // API Key elements
     const openaiKeyInput = document.getElementById('openai-key');
-    const deepseekOption = document.getElementById('deepseek-option');
-    const openaiOption = document.getElementById('openai-option');
-    const deepseekSettings = document.getElementById('deepseek-settings');
-    const openaiSettings = document.getElementById('openai-settings');
+    const saveApiKeyBtn = document.getElementById('save-api-key');
 
     // Interactive demo elements
     const sendPromptButton = document.getElementById('send-prompt');
@@ -50,150 +118,249 @@ document.addEventListener('DOMContentLoaded', function() {
     // Accordion elements
     const accordionHeaders = document.querySelectorAll('.accordion-header');
 
-    // Settings button click handler
-    settingsBtn.addEventListener('click', function() {
-        console.log('Settings button clicked');
-        settingsModal.style.display = 'block';
-    });
-    
-    // Provider selection handler
-    deepseekOption.addEventListener('change', function() {
-        if (this.checked) {
-            deepseekSettings.style.display = 'block';
-            openaiSettings.style.display = 'none';
-            modelTitle.textContent = 'DeepSeek Model';
-            demoSectionTitle.textContent = 'Interactive Demo of an IOG Model Context Protocol (MCP)';
-        }
-    });
-    
-    openaiOption.addEventListener('change', function() {
-        if (this.checked) {
-            deepseekSettings.style.display = 'none';
-            openaiSettings.style.display = 'block';
-            modelTitle.textContent = 'OpenAI Model';
-            demoSectionTitle.textContent = 'Interactive Demo of an OpenAI Model Context Protocol (MCP)';
-        }
-    });
-
-    // Close button handler
-    closeModalBtn.addEventListener('click', function() {
-        settingsModal.style.display = 'none';
-    });
-
-    // Click outside to close
-    window.addEventListener('click', function(event) {
-        if (event.target === settingsModal) {
-            settingsModal.style.display = 'none';
-        }
-    });
-
-    // Save settings handler
-    saveSettingsBtn.addEventListener('click', async function() {
-        // Get the selected provider
-        const provider = deepseekOption.checked ? 'deepseek' : 'openai';
+    // API Key save handler
+    saveApiKeyBtn.addEventListener('click', async function() {
+        const apiKey = openaiKeyInput.value.trim();
         
-        // Validate based on selected provider
-        if (provider === 'deepseek' && !deepseekKeyInput.value.trim()) {
-            alert('Please enter your DeepSeek API key');
-            return;
-        } else if (provider === 'openai' && !openaiKeyInput.value.trim()) {
-            alert('Please enter your OpenAI API key');
-            return;
-        }
-        
-        // Prepare the settings payload
-        const settings = {
-            provider: provider,
-            deepseekKey: deepseekKeyInput.value.trim(),
-            openaiKey: openaiKeyInput.value.trim()
-        };
-
-        try {
-            const response = await fetch('http://localhost:3000/api/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(settings),
-            });
-
-            if (response.ok) {
-                settingsModal.style.display = 'none';
-                alert('Settings saved successfully!');
-                // Update the model title based on the selected provider
-                modelTitle.textContent = provider === 'deepseek' ? 'DeepSeek Model' : 'OpenAI Model';
-                // Update the demo section title based on the selected provider
-                demoSectionTitle.textContent = provider === 'deepseek' 
-                    ? 'Interactive Demo of an IOG Model Context Protocol (MCP)' 
-                    : 'Interactive Demo of an OpenAI Model Context Protocol (MCP)';
-            } else {
-                const data = await response.json();
-                alert(`Error: ${data.error || 'Failed to save settings'}`);
+        if (apiKey) {
+            // Save API key to localStorage
+            localStorage.setItem('openai-api-key', apiKey);
+            console.log('OpenAI API key saved');
+            
+            // Send API key to server
+            try {
+                const response = await fetch('http://localhost:3000/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        provider: 'openai',
+                        openaiKey: apiKey
+                    }),
+                });
+                
+                if (response.ok) {
+                    // Show success message on the page instead of alert
+                    const headerContainer = document.querySelector('.api-key-container');
+                    
+                    // Remove any existing status messages
+                    const existingStatus = headerContainer.querySelector('.api-key-status');
+                    if (existingStatus) {
+                        existingStatus.remove();
+                    }
+                    
+                    // Create and add persistent success message
+                    const statusMsg = document.createElement('span');
+                    statusMsg.className = 'api-key-status success persistent';
+                    statusMsg.textContent = 'API key saved';
+                    headerContainer.appendChild(statusMsg);
+                    
+                    // Remove the missing API key class if present
+                    headerContainer.classList.remove('api-key-missing');
+                } else {
+                    // Show error on the page
+                    const headerContainer = document.querySelector('.api-key-container');
+                    
+                    // Remove any existing status messages
+                    const existingStatus = headerContainer.querySelector('.api-key-status');
+                    if (existingStatus) {
+                        existingStatus.remove();
+                    }
+                    
+                    // Create and add error message that's persistent
+                    const statusMsg = document.createElement('span');
+                    statusMsg.className = 'api-key-status error persistent';
+                    statusMsg.textContent = 'Failed to save API key';
+                    headerContainer.appendChild(statusMsg);
+                    
+                    // Add the missing API key class
+                    headerContainer.classList.add('api-key-missing');
+                }
+            } catch (error) {
+                console.error('Error saving API key:', error);
+                alert('Error saving API key: ' + error.message);
             }
-        } catch (error) {
-            console.error('Error saving settings:', error);
-            alert('Failed to save settings. Please try again.');
+        } else {
+            alert('Please enter a valid OpenAI API key');
         }
     });
+    
+    // Load saved API key if available
+    const savedApiKey = localStorage.getItem('openai-api-key');
+    if (savedApiKey) {
+        openaiKeyInput.value = savedApiKey;
+    }
 
-    // Check API key status on load
+    // Check API key status on page load
     async function checkApiKeyStatus() {
         try {
             const response = await fetch('http://localhost:3000/api/settings/status');
-            const { provider, hasDeepseekKey, hasOpenaiKey } = await response.json();
+            const { hasOpenaiKey } = await response.json();
             
-            // Set the correct radio button based on saved provider
-            if (provider === 'openai') {
-                openaiOption.checked = true;
-                deepseekSettings.style.display = 'none';
-                openaiSettings.style.display = 'block';
-                // Update model-side heading
-                document.querySelector('#model-side h3').textContent = 'OpenAI Model';
+            const headerContainer = document.querySelector('.api-key-container');
+            const existingStatus = headerContainer.querySelector('.api-key-status');
+            
+            // Update visual feedback based on API key status
+            if (hasOpenaiKey) {
+                console.log('OpenAI API key is set on the server');
+                
+                // If key is valid and no status message exists, create one
+                if (!existingStatus) {
+                    const statusMsg = document.createElement('span');
+                    statusMsg.className = 'api-key-status success persistent';
+                    statusMsg.textContent = 'API key saved';
+                    headerContainer.appendChild(statusMsg);
+                }
+                
+                // Remove the missing API key class if present
+                headerContainer.classList.remove('api-key-missing');
             } else {
-                deepseekOption.checked = true;
-                deepseekSettings.style.display = 'block';
-                openaiSettings.style.display = 'none';
-                // Update model-side heading
-                document.querySelector('#model-side h3').textContent = 'DeepSeek Model';
-            }
-            
-            // Show settings modal if the selected provider's API key is not set
-            if ((provider === 'deepseek' && !hasDeepseekKey) || 
-                (provider === 'openai' && !hasOpenaiKey)) {
-                settingsModal.style.display = 'block';
+                // If no valid key exists, show warning
+                if (existingStatus && existingStatus.classList.contains('success')) {
+                    // Remove previous success message
+                    existingStatus.remove();
+                }
+                
+                // Add warning message if none exists
+                if (!headerContainer.querySelector('.api-key-status.error')) {
+                    const statusMsg = document.createElement('span');
+                    statusMsg.className = 'api-key-status error persistent';
+                    statusMsg.textContent = 'Valid API key required';
+                    headerContainer.appendChild(statusMsg);
+                }
+                
+                // Add visual indicator class
+                headerContainer.classList.add('api-key-missing');
             }
         } catch (error) {
             console.error('Error checking API key status:', error);
-            // Show settings modal on error to ensure API keys are set
-            settingsModal.style.display = 'block';
+            
+            // Show connection error if server is unreachable
+            const headerContainer = document.querySelector('.api-key-container');
+            const existingStatus = headerContainer.querySelector('.api-key-status');
+            
+            if (!existingStatus || !existingStatus.classList.contains('error')) {
+                if (existingStatus) existingStatus.remove();
+                
+                const statusMsg = document.createElement('span');
+                statusMsg.className = 'api-key-status error persistent';
+                statusMsg.textContent = 'Server connection error';
+                headerContainer.appendChild(statusMsg);
+            }
         }
     }
     checkApiKeyStatus();
 
-    // Tool highlighting
+    // Add example steps to the step tracker
+    function addExampleSteps() {
+        const stepTrackerContainer = document.getElementById('step-tracker-container');
+        
+        // First step example
+        const step1 = document.createElement('div');
+        step1.className = 'step-item';
+        step1.style.borderLeft = '4px solid #4a69bd';
+        step1.innerHTML = `
+            <h4>Step 1: Search Tool</h4>
+            <p>Search results for: IOG products information</p>
+        `;
+        stepTrackerContainer.appendChild(step1);
+        
+        // Arrow between steps
+        const arrow = document.createElement('div');
+        arrow.className = 'step-arrow';
+        arrow.innerHTML = '↓';
+        stepTrackerContainer.appendChild(arrow);
+        
+        // Second step example
+        const step2 = document.createElement('div');
+        step2.className = 'step-item';
+        step2.style.borderLeft = '4px solid #4a69bd';
+        step2.innerHTML = `
+            <h4>Step 2: Iog-Products Tool</h4>
+            <p>IOG Product Portfolio:</p>
+            <p><strong>REALFI:</strong> RealFi is Input Output Global's initiative to bridge the gap between traditional finance and blockchain technology, focusing on real-world financial applications.</p>
+        `;
+        stepTrackerContainer.appendChild(step2);
+    }
+    
+    // Example steps disabled - step tracker starts empty
+    // addExampleSteps();
+
+    // Tool highlighting - toggle each independently
     tools.forEach(tool => {
         tool.addEventListener('click', () => {
-            tools.forEach(t => {
-                t.classList.remove('active');
-                t.style.borderColor = 'transparent';
-            });
-            tool.classList.add('active');
-            tool.style.borderColor = '#47bd4a';
+            // Toggle active state instead of removing from all
+            if (tool.classList.contains('active')) {
+                tool.classList.remove('active');
+                tool.style.borderColor = 'transparent';
+            } else {
+                tool.classList.add('active');
+                tool.style.borderColor = '#47bd4a';
+            }
         });
     });
     
-    // Data source highlighting
+    // Data source highlighting - toggle each independently
     dataSources.forEach(dataSource => {
         dataSource.addEventListener('click', () => {
-            dataSources.forEach(ds => {
-                ds.classList.remove('active');
-                ds.style.borderColor = 'transparent';
-            });
-            dataSource.classList.add('active');
-            dataSource.style.borderColor = '#9c6ade';
+            // Toggle active state instead of removing from all
+            if (dataSource.classList.contains('active')) {
+                dataSource.classList.remove('active');
+                dataSource.style.borderColor = 'transparent';
+            } else {
+                dataSource.classList.add('active');
+                dataSource.style.borderColor = '#9c6ade';
+            }
         });
     });
 
+    // Tools and data sources interaction logic
+    
+    // Step tracker functionality
+    function addStepToTracker(stepNumber, toolName, query) {
+        const stepTrackerContainer = document.getElementById('step-tracker-container');
+        
+        // Create step item
+        const stepItem = document.createElement('div');
+        stepItem.className = 'step-item';
+        
+        // Add blue vertical line on the left
+        stepItem.style.borderLeft = '4px solid #4a69bd';
+        
+        // Format the tool name for display
+        const formattedToolName = toolName.replace(/-/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        
+        // Set the content
+        stepItem.innerHTML = `
+            <h4>Step ${stepNumber}: ${formattedToolName} Tool</h4>
+            <p>${query ? `${query.substring(0, 80)}${query.length > 80 ? '...' : ''}` : 'Processing...'}</p>
+        `;
+        
+        // Add arrow if not the first step
+        if (stepTrackerContainer.children.length > 0) {
+            const arrow = document.createElement('div');
+            arrow.className = 'step-arrow';
+            arrow.innerHTML = '↓';
+            stepTrackerContainer.appendChild(arrow);
+        }
+        
+        // Add the step to the container
+        stepTrackerContainer.appendChild(stepItem);
+        
+        // Scroll to the bottom if there are many steps
+        stepTrackerContainer.scrollTop = stepTrackerContainer.scrollHeight;
+    }
+    
+    // Function to clear step tracker when starting a new query
+    function clearStepTracker() {
+        const stepTrackerContainer = document.getElementById('step-tracker-container');
+        stepTrackerContainer.innerHTML = '';
+    }
+    
     // Refresh button click handler
     refreshPromptButton.addEventListener('click', function() {
         // Clear the prompt textarea
@@ -201,6 +368,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Clear the model thinking area
         modelThinking.innerHTML = '';
+        
+        // Clear the step tracker
+        clearStepTracker();
         
         // Clear the tool output area
         toolOutput.innerHTML = '';
@@ -236,17 +406,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // Get available tools and data sources
-            const availableTools = Array.from(tools).map(tool => ({
-                name: tool.getAttribute('data-tool'),
-                description: tool.querySelector('p').textContent,
-                active: tool.classList.contains('active')
-            }));
+            const availableTools = Array.from(tools).map(tool => {
+                const toolId = tool.getAttribute('data-tool');
+                const toggle = tool.querySelector('.tool-toggle');
+                return {
+                    name: toolId,
+                    description: tool.querySelector('p').textContent,
+                    active: toggle ? toggle.checked : false
+                };
+            });
             
-            const availableDataSources = Array.from(dataSources).map(ds => ({
-                name: ds.getAttribute('data-source'),
-                description: ds.querySelector('p').textContent,
-                active: ds.classList.contains('active')
-            }));
+            const availableDataSources = Array.from(dataSources).map(ds => {
+                const sourceId = ds.getAttribute('data-source');
+                const toggle = ds.querySelector('.source-toggle');
+                return {
+                    name: sourceId,
+                    description: ds.querySelector('p').textContent,
+                    active: toggle ? toggle.checked : false
+                };
+            });
             
             // Combine tools and data sources
             const allTools = [
@@ -277,17 +455,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Failed to get response from DeepSeek');
+                throw new Error(error.error || 'Failed to get response from OpenAI');
             }
 
             const data = await response.json();
             console.log('Server response:', data);
             
-            // Handle different response structures
+            // Handle OpenAI response structure
             // The server response might have the assistant message in different places
             let assistantMessage;
             if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-                // Format from the DeepSeek API simulation
+                // Format from the OpenAI API
                 assistantMessage = data.choices[0].message;
                 console.log('Found assistant message in choices[0].message:', assistantMessage);
             } else if (data.response) {
@@ -311,19 +489,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (assistantMessage && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
                 console.log('Tool calls:', assistantMessage.tool_calls);
                 
-                // Reset all tool and data source highlights
-                tools.forEach(t => {
-                    t.classList.remove('active');
-                    t.style.borderColor = 'transparent';
-                });
-                
-                dataSources.forEach(ds => {
-                    ds.classList.remove('active');
-                    ds.style.borderColor = 'transparent';
-                });
+                // Do NOT reset tool highlights here - preserve the user's selected tools
+                // Instead, we'll highlight the tools that are being used during processing
                 
                 // Always create a fresh container for tool results
                 toolOutput.innerHTML = '<div id="tool-results-container"></div>';
+                
+                // Log how many tools are being used
+                console.log(`Processing ${assistantMessage.tool_calls.length} tool calls in sequence`);
                 
                 // Process each tool call in sequence
                 processToolCallsSequentially(assistantMessage.tool_calls);
@@ -349,35 +522,42 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show which tool is being used
             modelThinking.innerHTML += `<p class="tool-step">Step ${i+1}: Using ${toolName} tool...</p>`;
             
-            // Highlight the current tool or data source
-            tools.forEach(t => {
-                t.classList.remove('active');
-                t.style.borderColor = 'transparent';
-            });
+            // Add step to the step tracker container
+            addStepToTracker(i+1, toolName, query);
             
-            dataSources.forEach(ds => {
-                ds.classList.remove('active');
-                ds.style.borderColor = 'transparent';
-            });
+            // Temporarily highlight the current tool being used (without clearing other tool states)
+            // This provides visual feedback about which tool is currently executing
             
-            // Check if it's a tool
+            // Find the tool or data source element
             const selectedTool = document.querySelector(`[data-tool="${toolName}"]`);
-            if (selectedTool) {
-                selectedTool.classList.add('active');
-                selectedTool.style.borderColor = '#47bd4a';
+            const selectedDataSource = document.querySelector(`[data-source="${toolName}"]`);
+            
+            // Create a function to flash the tool briefly to show it's being used
+            const flashElement = (element, color) => {
+                if (!element) return;
                 
-                // Scroll to the tool to make it visible
-                selectedTool.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else {
-                // Check if it's a data source
-                const selectedDataSource = document.querySelector(`[data-source="${toolName}"]`);
-                if (selectedDataSource) {
-                    selectedDataSource.classList.add('active');
-                    selectedDataSource.style.borderColor = '#9c6ade';
-                    
-                    // Scroll to the data source to make it visible
-                    selectedDataSource.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                // Save original border color to restore after
+                const originalBorderColor = element.style.borderColor;
+                const originalBoxShadow = element.style.boxShadow;
+                
+                // Add a glow effect to show the tool is being used
+                element.style.borderColor = color;
+                element.style.boxShadow = `0 0 10px 3px ${color}80`; // 80 adds 50% opacity
+                
+                // Scroll to make it visible
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Return to normal after a short delay (don't remove active state)
+                setTimeout(() => {
+                    element.style.boxShadow = originalBoxShadow;
+                }, 2000);
+            };
+            
+            // Flash the appropriate element
+            if (selectedTool) {
+                flashElement(selectedTool, '#47bd4a');
+            } else if (selectedDataSource) {
+                flashElement(selectedDataSource, '#9c6ade');
             }
             
             // Process the tool call
@@ -385,15 +565,38 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await processToolCall(toolName, queryToUse, allResults);
             allResults.push({ toolName, result });
             
-            // Add the result to the container
-            const resultElement = document.createElement('div');
-            resultElement.className = 'tool-result-item';
-            resultElement.innerHTML = `
-                <h4>Step ${i+1}: ${toolName.charAt(0).toUpperCase() + toolName.slice(1)} Tool</h4>
-                <div class="tool-result">${result}</div>
-                ${i < toolCalls.length - 1 ? '<div class="flow-arrow">↓</div>' : ''}
-            `;
-            resultsContainer.appendChild(resultElement);
+            // Add the result to the container - ALL tool results go to step tracker
+            const stepTrackerContainer = document.getElementById('step-tracker-container');
+            const stepItem = document.createElement('div');
+            stepItem.className = 'step-item';
+            stepItem.style.borderLeft = '4px solid #4a69bd';
+            
+            // Format title based on tool name
+            const formattedToolName = toolName.charAt(0).toUpperCase() + toolName.slice(1).replace(/-/g, ' ');
+            
+            // For crypto-price tool, add special formatting
+            if (toolName === 'crypto-price') {
+                stepItem.innerHTML = `
+                    <h4>Step ${i+1}: ${formattedToolName} Tool</h4>
+                    <div class="crypto-result">${result}</div>
+                `;
+            } else {
+                stepItem.innerHTML = `
+                    <h4>Step ${i+1}: ${formattedToolName} Tool</h4>
+                    ${result}
+                `;
+            }
+            
+            // If we already have steps, add an arrow
+            if (stepTrackerContainer.children.length > 0) {
+                const arrow = document.createElement('div');
+                arrow.className = 'step-arrow';
+                arrow.innerHTML = '↓';
+                stepTrackerContainer.appendChild(arrow);
+            }
+            
+            // Add the step to the step tracker - no need for redundant placeholders in column 2
+            stepTrackerContainer.appendChild(stepItem);
             
             // Add a small delay to visualize the sequence
             await new Promise(resolve => setTimeout(resolve, 800));
@@ -405,22 +608,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Generate a final answer based on collected tool results
         const finalAnswer = await generateFinalAnswer(promptTextarea.value.trim(), allResults);
         
-        // Update the Analysis component with the final answer
-        modelThinking.innerHTML += `
-            <div class="final-answer-analysis">
-                <h4>Final Answer:</h4>
-                <div class="answer-content">${finalAnswer}</div>
-            </div>
-        `;
+        // Move the final answer to the third column
+        const finalAnswerContainer = document.getElementById('final-answer-container');
         
-        // Also create a final answer element for the tool results container
+        // Clear previous final answer if any
+        finalAnswerContainer.innerHTML = '';
+        
+        // Create a new final answer element
         const finalAnswerElement = document.createElement('div');
         finalAnswerElement.className = 'final-answer';
         finalAnswerElement.innerHTML = `
             <h4>Final Answer</h4>
             <div class="answer-content">${finalAnswer}</div>
         `;
-        resultsContainer.appendChild(finalAnswerElement);
+        finalAnswerContainer.appendChild(finalAnswerElement);
         
         // Add a final summary if multiple tools were used
         if (toolCalls.length > 1) {
@@ -448,7 +649,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     query: originalQuery,
-                    toolResults: toolResults
+                    toolResults: toolResults,
+                    useGlobalMemory: useGlobalMemory
                 })
             });
             

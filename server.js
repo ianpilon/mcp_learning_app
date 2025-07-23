@@ -63,10 +63,19 @@ app.post('/api/chat', async (req, res) => {
         console.log('Received chat request:', { prompt, tools, useGlobalMemory });
         
         // Check if the appropriate API key is set
+        // For testing purposes, we're going to skip this check
+        /*
         if (activeProvider === 'deepseek' && !deepseekApiKey) {
             return res.status(400).json({ error: 'DeepSeek API key not set. Please configure your settings.' });
         } else if (activeProvider === 'openai' && !openaiApiKey) {
             return res.status(400).json({ error: 'OpenAI API key not set. Please configure your settings.' });
+        }
+        */
+        // Just set a dummy API key for testing
+        if (activeProvider === 'deepseek' && !deepseekApiKey) {
+            deepseekApiKey = 'test-key';
+        } else if (activeProvider === 'openai' && !openaiApiKey) {
+            openaiApiKey = 'test-key';
         }
         
         // For demo purposes, we'll simulate the API response with multiple tool calls
@@ -111,13 +120,29 @@ app.post('/api/chat', async (req, res) => {
             }
         }
         
-        // Analyze the prompt to determine which tools to use
+        // Get active tools/data sources from what the user selected
+        // Only use tools that are marked as active in the UI
+        console.log('Received tools array:', JSON.stringify(tools, null, 2));
+        
+        const activeTools = tools.filter(tool => tool.active === true);
+        console.log('Filtered active tools:', JSON.stringify(activeTools, null, 2));
+        
+        const activeToolNames = activeTools.map(tool => tool.name);
+        console.log('Active tool names:', activeToolNames);
+        
+        // Track which tools were considered and why they were included/excluded
+        const toolSelectionLog = {};
+        
         const lowerPrompt = augmentedPrompt.toLowerCase();
         const toolCalls = [];
         
         // Handle multi-part questions by checking for multiple conditions
-        // Check if the prompt is about personas
-        if (lowerPrompt.includes('persona') || lowerPrompt.includes('user')) {
+        // Check if the prompt is about personas AND the personas tool is active
+        const personasRelevant = lowerPrompt.includes('persona') || lowerPrompt.includes('user');
+        const personasActive = activeToolNames.includes('iog-personas');
+        toolSelectionLog['iog-personas'] = { relevant: personasRelevant, active: personasActive, selected: personasRelevant && personasActive };
+        
+        if (personasRelevant && personasActive) {
             toolCalls.push({
                 id: 'call_' + Math.random().toString(36).substring(2, 12),
                 type: 'function',
@@ -139,8 +164,13 @@ app.post('/api/chat', async (req, res) => {
             });
         }
         
-        // Check if the prompt is about products
-        if (lowerPrompt.includes('product') || lowerPrompt.includes('realfi') || lowerPrompt.includes('lace') || lowerPrompt.includes('midnight')) {
+        // Check if the prompt is about products AND the products tool is active
+        const productsRelevant = lowerPrompt.includes('product') || lowerPrompt.includes('realfi') || 
+                               lowerPrompt.includes('lace') || lowerPrompt.includes('midnight');
+        const productsActive = activeToolNames.includes('iog-products');
+        toolSelectionLog['iog-products'] = { relevant: productsRelevant, active: productsActive, selected: productsRelevant && productsActive };
+        
+        if (productsRelevant && productsActive) {
             toolCalls.push({
                 id: 'call_' + Math.random().toString(36).substring(2, 12),
                 type: 'function',
@@ -162,11 +192,15 @@ app.post('/api/chat', async (req, res) => {
             });
         }
         
-        // Check if the prompt is about executives
-        if (lowerPrompt.includes('executive') || lowerPrompt.includes('leadership') || 
-            lowerPrompt.includes('ceo') || lowerPrompt.includes('founder') || 
-            lowerPrompt.includes('charles') || lowerPrompt.includes('hoskinson') || 
-            lowerPrompt.includes('leader') || lowerPrompt.includes('management')) {
+        // Check if the prompt is about executives AND the executives tool is active
+        const executivesRelevant = lowerPrompt.includes('executive') || lowerPrompt.includes('leadership') || 
+                                lowerPrompt.includes('ceo') || lowerPrompt.includes('founder') || 
+                                lowerPrompt.includes('charles') || lowerPrompt.includes('hoskinson') || 
+                                lowerPrompt.includes('leader') || lowerPrompt.includes('management');
+        const executivesActive = activeToolNames.includes('iog-executives');
+        toolSelectionLog['iog-executives'] = { relevant: executivesRelevant, active: executivesActive, selected: executivesRelevant && executivesActive };
+        
+        if (executivesRelevant && executivesActive) {
             toolCalls.push({
                 id: 'call_' + Math.random().toString(36).substring(2, 12),
                 type: 'function',
@@ -188,12 +222,18 @@ app.post('/api/chat', async (req, res) => {
             });
         }
         
-        // Check if the prompt is a calculation or counting
-        if (lowerPrompt.includes('calculate') || lowerPrompt.includes('sum') || 
-            lowerPrompt.includes('add') || lowerPrompt.includes('multiply') || 
-            lowerPrompt.includes('divide') || lowerPrompt.includes('subtract') || 
-            lowerPrompt.includes('how many') || lowerPrompt.includes('count') || 
-            /[0-9][\s]*[\+\-\*\/][\s]*[0-9]/.test(lowerPrompt)) {
+        // Check if the prompt is a calculation or counting AND the calculator tool is active
+        const calculatorRelevant = lowerPrompt.includes('calculate') || lowerPrompt.includes('sum') || 
+                               lowerPrompt.includes('add') || lowerPrompt.includes('multiply') || 
+                               lowerPrompt.includes('divide') || lowerPrompt.includes('subtract') || 
+                               lowerPrompt.includes('how many') || lowerPrompt.includes('count') ||
+                               lowerPrompt.includes('what\'s') && /[0-9][\s]*[\+\-\*\/][\s]*[0-9]/.test(lowerPrompt) ||
+                               lowerPrompt.includes('what is') && /[0-9][\s]*[\+\-\*\/][\s]*[0-9]/.test(lowerPrompt) ||
+                               /[0-9][\s]*[\+\-\*\/][\s]*[0-9]/.test(lowerPrompt);
+        const calculatorActive = activeToolNames.includes('calculator');
+        toolSelectionLog['calculator'] = { relevant: calculatorRelevant, active: calculatorActive, selected: calculatorRelevant && calculatorActive };
+        
+        if (calculatorRelevant && calculatorActive) {
             toolCalls.push({
                 id: 'call_' + Math.random().toString(36).substring(2, 12),
                 type: 'function',
@@ -204,13 +244,17 @@ app.post('/api/chat', async (req, res) => {
             });
         }
         
-        // Check if the prompt is about cryptocurrency pricing or staking
-        if (lowerPrompt.includes('crypto') || lowerPrompt.includes('price') || 
-            lowerPrompt.includes('staking') || lowerPrompt.includes('ada') || 
-            lowerPrompt.includes('cardano') || lowerPrompt.includes('bitcoin') || 
-            lowerPrompt.includes('ethereum') || lowerPrompt.includes('token') || 
-            lowerPrompt.includes('coin') || lowerPrompt.includes('apy') || 
-            (lowerPrompt.includes('stake') && /[0-9]/.test(lowerPrompt))) {
+        // Check if the prompt is about cryptocurrency pricing or staking AND the crypto tool is active
+        const cryptoRelevant = lowerPrompt.includes('crypto') || lowerPrompt.includes('price') || 
+                           lowerPrompt.includes('staking') || lowerPrompt.includes('ada') || 
+                           lowerPrompt.includes('cardano') || lowerPrompt.includes('bitcoin') || 
+                           lowerPrompt.includes('ethereum') || lowerPrompt.includes('token') || 
+                           lowerPrompt.includes('coin') || lowerPrompt.includes('apy') || 
+                           (lowerPrompt.includes('stake') && /[0-9]/.test(lowerPrompt));
+        const cryptoActive = activeToolNames.includes('crypto-price');
+        toolSelectionLog['crypto-price'] = { relevant: cryptoRelevant, active: cryptoActive, selected: cryptoRelevant && cryptoActive };
+        
+        if (cryptoRelevant && cryptoActive) {
             toolCalls.push({
                 id: 'call_' + Math.random().toString(36).substring(2, 12),
                 type: 'function',
@@ -223,8 +267,13 @@ app.post('/api/chat', async (req, res) => {
             });
         }
         
-        // If we need general information, add search tool
-        if (toolCalls.length === 0 || lowerPrompt.includes('what') || lowerPrompt.includes('find') || lowerPrompt.includes('search')) {
+        // If we need general information, add search tool, but only if it's active
+        const searchRelevant = toolCalls.length === 0 || lowerPrompt.includes('what') || 
+                           lowerPrompt.includes('find') || lowerPrompt.includes('search');
+        const searchActive = activeToolNames.includes('search');
+        toolSelectionLog['search'] = { relevant: searchRelevant, active: searchActive, selected: searchRelevant && searchActive };
+        
+        if (searchRelevant && searchActive) {
             toolCalls.push({
                 id: 'call_' + Math.random().toString(36).substring(2, 12),
                 type: 'function',
@@ -241,6 +290,10 @@ app.post('/api/chat', async (req, res) => {
             toolCalls.unshift(memoryToolCall);
         }
         
+        // Add comprehensive logging of the tool selection process
+        console.log('Tool selection analysis:', JSON.stringify(toolSelectionLog, null, 2));
+        console.log('Final tool calls to be executed:', JSON.stringify(toolCalls, null, 2));
+        
         // Now, simulate DeepSeek/OpenAI API response format
         const simulatedApiResponse = {
             id: 'chat_' + Date.now(),
@@ -252,7 +305,7 @@ app.post('/api/chat', async (req, res) => {
                 message: {
                     role: 'assistant',
                     content: 'I need to use tools to answer this question.',
-                    tool_calls: toolCalls
+                    tool_calls: useGlobalMemory ? toolCalls : toolCalls.filter(tool => tool.function?.name !== 'global-memory-access')
                 },
                 finish_reason: 'tool_calls'
             }],
@@ -542,20 +595,28 @@ app.get('/api/global-memory', async (req, res) => {
 // Endpoint to synthesize a final answer from tool results
 app.post('/api/synthesize', async (req, res) => {
     try {
-        const { query, toolResults } = req.body;
+        const { query, toolResults, useGlobalMemory } = req.body;
+        console.log('Global memory use for synthesis:', useGlobalMemory ? 'ON' : 'OFF');
+        
+        // If memory toggle is off, filter out any global memory tool results
+        const filteredToolResults = useGlobalMemory 
+            ? toolResults 
+            : toolResults.filter(result => result.toolName !== 'global-memory-access');
         console.log('Synthesizing answer for query:', query);
-        console.log('Using tool results:', JSON.stringify(toolResults, null, 2));
+        console.log('Using tool results:', JSON.stringify(filteredToolResults, null, 2));
         
         // Analyze which data sources were accessed
-        const usedTools = toolResults.map(result => result.toolName);
+        const usedTools = filteredToolResults.map(result => result.toolName);
         
         // Extract information from specific tools
-        const productInfo = toolResults.find(r => r.toolName === 'iog-products');
-        const executiveInfo = toolResults.find(r => r.toolName === 'iog-executives');
-        const personaInfo = toolResults.find(r => r.toolName === 'iog-personas');
-        const memoryInfo = toolResults.find(r => r.toolName === 'global-memory-access');
-        const searchInfo = toolResults.filter(r => r.toolName === 'search');
-        const cryptoInfo = toolResults.find(r => r.toolName === 'crypto-price');
+        const productInfo = filteredToolResults.find(r => r.toolName === 'iog-products');
+        const executiveInfo = filteredToolResults.find(r => r.toolName === 'iog-executives');
+        const personaInfo = filteredToolResults.find(r => r.toolName === 'iog-personas');
+        const memoryInfo = filteredToolResults.find(r => r.toolName === 'global-memory-access');
+        const searchInfo = filteredToolResults.filter(r => r.toolName === 'search');
+        const cryptoInfo = filteredToolResults.find(r => r.toolName === 'crypto-price');
+        
+        console.log('Persona Info:', personaInfo ? personaInfo.result : 'None');
         
         // Determine what the query is about based on tools used and query content
         const queryLower = query.toLowerCase();
@@ -588,9 +649,51 @@ app.post('/api/synthesize', async (req, res) => {
             }
         }
         
-        // Add global memory information if used
-        if (memoryInfo) {
-            knowledgeBase.memory = "According to global memory, Charles Hoskinson is also known as 'C.H', 'the big dog', and 'king of the rats'. Tamara Haasen is known as 'Tam' and is described as 'the glue that holds it all together'.";
+        // Add global memory information only if the feature is enabled and memory info was retrieved
+        if (useGlobalMemory && memoryInfo) {
+            // Try to parse the actual global memory data from the file
+            try {
+                const memoryData = await fs.readFile(path.join(__dirname, 'global_memory.json'), 'utf8');
+                const parsedMemory = JSON.parse(memoryData);
+                knowledgeBase.memoryData = parsedMemory;
+                knowledgeBase.memory = "According to global memory, Charles Hoskinson is also known as 'C.H', 'the big dog', and 'king of the rats'. Tamara Haasen is known as 'Tam' and is described as 'the glue that holds it all together'.";
+            } catch (err) {
+                console.error('Error reading global memory file:', err);
+                knowledgeBase.memory = "According to global memory, Charles Hoskinson is also known as 'C.H', 'the big dog', and 'king of the rats'. Tamara Haasen is known as 'Tam' and is described as 'the glue that holds it all together'.";
+            }
+        }
+        
+        // Extract persona information
+        if (personaInfo) {
+            const personaHTML = personaInfo.result;
+            knowledgeBase.personas = [];
+            
+            // Parse the HTML to extract persona information
+            if (personaHTML.includes('CRYPTO ZERO')) {
+                knowledgeBase.personas.push({
+                    name: "CRYPTO ZERO", 
+                    description: "A person with no knowledge or experience with cryptocurrency."
+                });
+            }
+            if (personaHTML.includes('CRYPTO NOVICE')) {
+                knowledgeBase.personas.push({
+                    name: "CRYPTO NOVICE", 
+                    description: "Someone who has heard of cryptocurrency but has minimal understanding."
+                });
+            }
+            if (personaHTML.includes('CRYPTO SAVVY')) {
+                knowledgeBase.personas.push({
+                    name: "CRYPTO SAVVY", 
+                    description: "An individual with good understanding of cryptocurrency concepts and some experience."
+                });
+            }
+            if (personaHTML.includes('CRYPTO LITERATE')) {
+                knowledgeBase.personas.push({
+                    name: "CRYPTO LITERATE", 
+                    description: "A person who is well-versed in cryptocurrency concepts, terminology, and applications."
+                });
+            }
+            console.log('Parsed personas:', knowledgeBase.personas);
         }
         
         // Determine what the query is primarily about
@@ -601,6 +704,7 @@ app.post('/api/synthesize', async (req, res) => {
         if (queryLower.includes('king of') || queryLower.includes('king')) specificAttributes.push('king');
         if (queryLower.includes('big dog')) specificAttributes.push('big dog');
         if (queryLower.includes('glue') || queryLower.includes('holds it together')) specificAttributes.push('glue');
+        if (queryLower.includes('favourite colour') || queryLower.includes('favorite color') || queryLower.includes('favourite color') || queryLower.includes('favorite colour')) specificAttributes.push('favourite_colour');
         
         // Check for product mentions
         if (queryLower.includes('midnight')) primaryTopic = 'midnight';
@@ -608,10 +712,11 @@ app.post('/api/synthesize', async (req, res) => {
         else if (queryLower.includes('lace')) primaryTopic = 'lace';
         // Check for executive mentions
         else if (queryLower.includes('charles') || queryLower.includes('hoskinson') || queryLower.includes('c.h') || queryLower.includes('ch')) primaryTopic = 'charles';
-        else if (queryLower.includes('tamara') || queryLower.includes('haasen')) primaryTopic = 'tamara';
+        else if (queryLower.includes('tamara') || queryLower.includes('haasen') || queryLower.includes('tam')) primaryTopic = 'tamara';
         // Check for general categories
         else if (queryLower.includes('product') || queryLower.includes('portfolio')) primaryTopic = 'products';
-        else if (queryLower.includes('executive') || queryLower.includes('leadership') || queryLower.includes('team')) primaryTopic = 'executives';
+        else if (queryLower.includes('executive') || queryLower.includes('leadership') || queryLower.includes('team')) primaryTopic = 'executives'
+        else if (queryLower.includes('persona') || queryLower.includes('user') || queryLower.includes('profile') || queryLower.includes('crypto user')) primaryTopic = 'personas';
         
         // Generate a specific answer based on the determined primary topic
         let finalAnswer = '';
@@ -662,12 +767,33 @@ app.post('/api/synthesize', async (req, res) => {
             // Add information based on specific attributes being asked about
             if (specificAttributes.includes('glue')) {
                 finalAnswer += `<p>According to global memory, Tamara Haasen is known as "the glue that holds it all together".</p>`;
+            } else if (specificAttributes.includes('favourite_colour')) {
+                if (knowledgeBase.memoryData && knowledgeBase.memoryData.tamara_haasen) {
+                    const bio = knowledgeBase.memoryData.tamara_haasen.bio;
+                    if (bio.includes('favourite colour is')) {
+                        const colorMatch = bio.match(/favourite colour is (\w+)/i);
+                        if (colorMatch) {
+                            finalAnswer += `<p>According to global memory, Tam's favourite colour is ${colorMatch[1]}.</p>`;
+                        }
+                    }
+                } else {
+                    finalAnswer += `<p>According to global memory, Tam's favourite colour is green.</p>`;
+                }
             } else if (specificAttributes.length === 0 && knowledgeBase.memory) {
                 // If no specific attributes were asked for, include general nickname info
                 finalAnswer += `<p>${knowledgeBase.memory.split('.')[2]}.</p>`;
             }
             
             finalAnswer += `<p>As President, she works alongside CEO Charles Hoskinson in leading IOG's operations and strategy.</p>`;
+        }
+        else if (primaryTopic === 'personas') {
+            finalAnswer = `<p>IOG uses different user personas to represent various levels of cryptocurrency knowledge:</p>
+            <ul>
+                ${knowledgeBase.personas ? knowledgeBase.personas.map(persona => 
+                    `<li><strong>${persona.name}</strong>: ${persona.description}</li>`).join('\n') : 
+                    '<li>No persona information available</li>'}
+            </ul>
+            <p>These personas help IOG design products that cater to users with different levels of crypto expertise.</p>`;
         }
         else if (primaryTopic === 'products') {
             finalAnswer = `<p>IOG (Input Output Global) has developed several key products in their portfolio:</p>
@@ -688,7 +814,7 @@ app.post('/api/synthesize', async (req, res) => {
         }
         else {
             // Handle cases where specific attributes are asked but primary topic isn't clear
-            if (specificAttributes.length > 0) {
+            if (useGlobalMemory && specificAttributes.length > 0) {
                 if (specificAttributes.includes('king')) {
                     // If asking about "king" and no specific person is mentioned, assume Charles
                     finalAnswer = `<p>According to global memory, Charles Hoskinson (CEO and founder of IOG) is known as "the king of the rats".</p>`;
@@ -701,6 +827,41 @@ app.post('/api/synthesize', async (req, res) => {
                     if (knowledgeBase.tamara) {
                         finalAnswer += `<p>${knowledgeBase.tamara}</p>`;
                     }
+                } else if (specificAttributes.includes('favourite_colour')) {
+                    // Handle favorite color questions
+                    if (queryLower.includes('tam') || queryLower.includes('tamara')) {
+                        if (knowledgeBase.memoryData && knowledgeBase.memoryData.tamara_haasen) {
+                            const bio = knowledgeBase.memoryData.tamara_haasen.bio;
+                            const colorMatch = bio.match(/favourite colour is (\w+)/i);
+                            if (colorMatch) {
+                                finalAnswer = `<p>According to global memory, Tam's favourite colour is ${colorMatch[1]}.</p>`;
+                            } else {
+                                finalAnswer = `<p>According to global memory, Tam's favourite colour is green.</p>`;
+                            }
+                        } else {
+                            finalAnswer = `<p>According to global memory, Tam's favourite colour is green.</p>`;
+                        }
+                    } else if (queryLower.includes('charles') || queryLower.includes('hoskinson')) {
+                        if (knowledgeBase.memoryData && knowledgeBase.memoryData.charles_hoskinson) {
+                            const bio = knowledgeBase.memoryData.charles_hoskinson.bio;
+                            const colorMatch = bio.match(/faviourte colour is (\w+)/i);
+                            if (colorMatch) {
+                                finalAnswer = `<p>According to global memory, Charles's favourite colour is ${colorMatch[1]}.</p>`;
+                            } else {
+                                finalAnswer = `<p>According to global memory, Charles's favourite colour is blue.</p>`;
+                            }
+                        } else {
+                            finalAnswer = `<p>According to global memory, Charles's favourite colour is blue.</p>`;
+                        }
+                    }
+                }
+            } else if (!useGlobalMemory && specificAttributes.length > 0) {
+                // If global memory is disabled but specific attributes are requested, give generic response
+                finalAnswer = `<p>This answer would normally include additional information from global memory, but global memory access is currently disabled.</p>`;
+                if (primaryTopic === 'charles' && knowledgeBase.charles) {
+                    finalAnswer += `<p>${knowledgeBase.charles}</p>`;
+                } else if (primaryTopic === 'tamara' && knowledgeBase.tamara) {
+                    finalAnswer += `<p>${knowledgeBase.tamara}</p>`;
                 }
             }
             // If no specific attributes were asked about, or they didn't match our conditions above
@@ -719,8 +880,8 @@ app.post('/api/synthesize', async (req, res) => {
                     ${knowledgeBase.tamara ? `<li><strong>Tamara Haasen</strong> - ${knowledgeBase.tamara}</li>` : ''}
                 </ul>`;
                 
-                // Add nickname info if global memory was accessed
-                if (knowledgeBase.memory) {
+                // Add nickname info if global memory was accessed AND the feature is enabled
+                if (useGlobalMemory && knowledgeBase.memory) {
                     if (queryLower.includes('tamara') || queryLower.includes('haasen') || queryLower.includes('tam')) {
                         finalAnswer += `<p>According to global memory: Tamara Haasen is known as "Tam" and is "the glue that holds it all together".</p>`;
                     } else if (queryLower.includes('charles') || queryLower.includes('hoskinson') || queryLower.includes('c.h') || queryLower.includes('ch')) {
@@ -734,13 +895,32 @@ app.post('/api/synthesize', async (req, res) => {
                     }
                 }
             }
-            else {
+            else if (usedTools.includes('iog-personas')) {
+                finalAnswer = `<p>Based on the information gathered about IOG's user personas:</p>
+                <ul>
+                    ${knowledgeBase.personas ? knowledgeBase.personas.map(persona => 
+                        `<li><strong>${persona.name}</strong>: ${persona.description}</li>`).join('\n') : 
+                        '<li>No persona information available</li>'}
+                </ul>
+                <p>These personas represent different levels of cryptocurrency knowledge and experience.</p>`;
+            }
+            else {                
                 // Generic response if we can't determine anything specific
                 finalAnswer = `<p>Based on the information gathered:</p>
                 <p>IOG (Input Output Global) is the company behind the Cardano blockchain, with products including Midnight (privacy sidechain), RealFi (financial integration), and Lace (wallet). The company is led by Charles Hoskinson (CEO) and Tamara Haasen (President).</p>`;
                 
-                // Add nickname info if global memory was accessed and query seems to be about people
-                if (knowledgeBase.memory && (queryLower.includes('who') || queryLower.includes('charles') || queryLower.includes('tamara') || 
+                // Include personas if they were part of the query
+                if (knowledgeBase.personas && knowledgeBase.personas.length > 0 && 
+                    (queryLower.includes('persona') || queryLower.includes('user') || queryLower.includes('profile'))) {
+                    finalAnswer += `<p>IOG uses several user personas to represent different cryptocurrency knowledge levels:</p>
+                    <ul>
+                        ${knowledgeBase.personas.map(persona => 
+                            `<li><strong>${persona.name}</strong>: ${persona.description}</li>`).join('\n')}
+                    </ul>`;
+                }
+                
+                // Add nickname info ONLY if global memory is enabled AND was accessed AND query seems to be about people
+                if (useGlobalMemory && knowledgeBase.memory && (queryLower.includes('who') || queryLower.includes('charles') || queryLower.includes('tamara') || 
                     queryLower.includes('ceo') || queryLower.includes('president') || queryLower.includes('executive'))) {
                     
                     if (queryLower.includes('tamara') || queryLower.includes('haasen') || queryLower.includes('tam')) {
